@@ -1,64 +1,54 @@
-export const GRID_SIZE = 9
+// lib/use-game-state.ts
+import { useCallback, useReducer } from "react"
+import _ from "lodash"
+import { GRID_SIZE, BLOCK_SHAPES, BLOCK_COLORS, type Block } from "@/lib/game-constants"
 
-export const BLOCK_SHAPES = [
-  [[1]],
-  [[1, 1]],
-  [[1], [1]],
-  [[1, 1, 1]],
-  [[1], [1], [1]],
-  [
-    [1, 1],
-    [1, 1],
-  ],
-  [
-    [1, 1, 1],
-    [1, 0, 0],
-  ],
-  [
-    [1, 0],
-    [1, 0],
-    [1, 1],
-  ],
-  [
-    [1, 1, 1],
-    [0, 0, 1],
-  ],
-  [
-    [0, 1],
-    [0, 1],
-    [1, 1],
-  ],
-  [
-    [1, 1, 0],
-    [0, 1, 1],
-  ],
-  [
-    [0, 1, 1],
-    [1, 1, 0],
-  ],
-  [[1, 1, 1, 1]],
-  [[1], [1], [1], [1]],
-  [
-    [1, 1, 1],
-    [0, 1, 0],
-  ],
-]
-
-export const BLOCK_COLORS = [
-  { bg: "bg-blue-500", light: "bg-blue-400", name: "Blue" },
-  { bg: "bg-purple-500", light: "bg-purple-400", name: "Purple" },
-  { bg: "bg-pink-500", light: "bg-pink-400", name: "Pink" },
-  { bg: "bg-cyan-500", light: "bg-cyan-400", name: "Cyan" },
-  { bg: "bg-emerald-500", light: "bg-emerald-400", name: "Emerald" },
-]
-
-export interface Block {
-  id: number
-  shape: number[][]
-  colorIndex: number
+type GameState = {
+  grid: (number | null)[][]
+  blocks: Block[]
+  score: number
+  gameOver: boolean
 }
 
-export interface PreviewPosition {
-  row: number
+type GameAction =
+  | { type: "PLACE_BLOCK"; block: Block; row: number; col: number }
+  | { type: "CLEAR_LINES"; clearedCount: number }
+  | { type: "GENERATE_BLOCKS" }
+  | { type: "RESET_GAME" }
+  | { type: "SET_GAME_OVER" }
+
+const initialState: GameState = {
+  grid: Array(GRID_SIZE)
+    .fill(null)
+    .map(() => Array(GRID_SIZE).fill(null)),
+  blocks: [],
+  score: 0,
+  gameOver: false,
+}
+
+// Use lodash for efficient operations
+const generateNewBlocks = (): Block[] => {
+  return _.times(3, (i) => ({
+    id: Date.now() + i + Math.random(),
+    shape: _.sample(BLOCK_SHAPES)!,
+    colorIndex: _.random(0, BLOCK_COLORS.length - 1),
+  }))
+}
+
+const canPlaceBlock = (
+  grid: (number | null)[][],
+  shape: number[][],
+  row: number,
   col: number
-}
+): boolean => {
+  return _.every(shape, (shapeRow, r) =>
+    _.every(shapeRow, (cell, c) => {
+      if (cell !== 1) return true
+      const newRow = row + r
+      const newCol = col + c
+      return (
+        newRow >= 0 &&
+        newRow < GRID_SIZE &&
+        newCol >= 0 &&
+        newCol < GRID_SIZE &&
+        grid[newRow][newCol]
